@@ -1,0 +1,67 @@
+FROM golang:1.13-alpine as gobuilder
+
+ARG SENSU_GO_VERSION
+ARG SENSU_GO_HASH
+
+WORKDIR /src/sensu-go
+
+RUN wget -O sensu-go.tar.gz "https://github.com/sensu/sensu-go/archive/v$SENSU_GO_VERSION.tar.gz"; \
+	tar -C . --strip-components=1  -xzf sensu-go.tar.gz; \
+	rm sensu-go.tar.gz;
+
+# sensu-agent
+RUN go build -ldflags '-X "github.com/sensu/sensu-go/version.Version='`echo $SENSU_GO_VERSION`'" -X "github.com/sensu/sensu-go/version.BuildDate='`date +'%Y-%d-%m'`'" -X "github.com/sensu/sensu-go/version.BuildSHA='`echo $SENSU_GO_HASH`'"' -o bin/sensu-agent ./cmd/sensu-agent
+
+# sensu-backend
+RUN go build -ldflags '-X "github.com/sensu/sensu-go/version.Version='`echo $SENSU_GO_VERSION`'" -X "github.com/sensu/sensu-go/version.BuildDate='`date +'%Y-%d-%m'`'" -X "github.com/sensu/sensu-go/version.BuildSHA='`echo $SENSU_GO_HASH`'"' -o bin/sensu-backend ./cmd/sensu-backend
+
+# sensuctl
+RUN go build -ldflags '-X "github.com/sensu/sensu-go/version.Version='`echo $SENSU_GO_VERSION`'" -X "github.com/sensu/sensu-go/version.BuildDate='`date +'%Y-%d-%m'`'" -X "github.com/sensu/sensu-go/version.BuildSHA='`echo $SENSU_GO_HASH`'"' -o bin/sensuctl ./cmd/sensuctl
+
+RUN bin/sensu-backend version |grep $SENSU_GO_VERSION
+
+FROM alpine:3.8 as etcdctl-fetch
+
+RUN apk add --no-cache curl
+
+RUN curl -fsSLO https://github.com/coreos/etcd/releases/download/v3.3.9/etcd-v3.3.9-linux-amd64.tar.gz && \
+  tar xvf etcd-v3.3.9-linux-amd64.tar.gz --strip-components 1 etcd-v3.3.9-linux-amd64/etcd etcd-v3.3.9-linux-amd64/etcdctl; \
+  rm etcd-v3.3.9-linux-amd64.tar.gz;
+
+FROM sensu/sensu:6 as orginal
+
+RUN echo "Get me youre scripts ;)"
+
+FROM alpine:3.8
+
+LABEL name="sensu/sensu" \
+      version="$SENSU_GO_VERSION" \
+      summary="Sensu $SENSU_GO_VERSION - Full-stack monitoring" \
+      description="Sensu is an event pipeline and monitoring system for everything from the server closet to the serverless application." \
+      url="https://sensu.io/" \
+      run="docker run -d --name sensu-backend sensu/sensu" \
+      io.k8s.description="Sensu" \
+      io.k8s.display-name="Sensu" \
+      io.openshift.expose-services="8081:http,8080:http,2379:http" \
+      io.openshift.tags="sensu,monitoring,observability"
+
+RUN addgroup -S sensu && \
+    adduser -DHS sensu -G sensu -h /var/lib/sensu && \
+    mkdir -pv /etc/sensu /var/cache/sensu /var/lib/sensu /var/log/sensu /var/run/sensu && \
+    chown -R sensu:sensu /etc/sensu /var/cache/sensu /var/lib/sensu /var/log/sensu /var/run/sensu /var/lib/sensu
+
+RUN apk add --no-cache ca-certificates dumb-init && \
+    ln -sf /opt/sensu/bin/entrypoint.sh /usr/local/bin/sensu-agent && \
+    ln -sf /opt/sensu/bin/entrypoint.sh /usr/local/bin/sensu-backend && \
+    ln -sf /opt/sensu/bin/sensuctl /usr/local/bin/sensuctl
+
+USER sensu
+
+VOLUME /var/lib/sensu
+
+COPY --from=etcdctl-fetch etcdctl /usr/local/bin/etcdctl
+COPY --from=gobuilder /src/sensu-go/bin/ /opt/sensu/bin/
+COPY --from=orginal /opt/sensu/bin/entrypoint.sh /opt/sensu/bin/
+
+CMD ["sensu-backend"]
+EXPOSE 2379 2380 8080 8081

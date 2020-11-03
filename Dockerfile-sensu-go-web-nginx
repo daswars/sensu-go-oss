@@ -1,0 +1,22 @@
+FROM node:10-alpine as webbuilder
+
+ARG SENSU_GO_WEB_VERSION
+
+WORKDIR /opt/sensu
+
+RUN apk add --no-cache git
+
+RUN git clone --branch ${SENSU_GO_WEB_VERSION} --depth 1 https://github.com/sensu/web.git
+
+WORKDIR /opt/sensu/web
+
+RUN yarn install && \
+    yarn run build
+
+FROM nginx:1.19-alpine
+
+COPY --from=webbuilder /opt/sensu/web/build/app /usr/share/nginx/html
+COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx/30-generate-nginx-upstream-list.sh /docker-entrypoint.d
+
+ENV UPTREAM_LIST=backend:8080

@@ -1,0 +1,45 @@
+version: '3.8'
+services:
+  frontend:
+    image: ${DOCKER_USERNAME:-daswars}/sensu-web-nginx
+    networks:
+      - sensu
+    environment:
+      UPTREAM_LIST: backend1:8080 backend2:8080 backend3:8080
+    ports:
+      - "80:80"
+
+  backend1: &sensu-backend
+    image: ${DOCKER_USERNAME:-daswars}/sensu
+    command: sensu-backend start --etcd-listen-client-urls http://0.0.0.0:2379 --etcd-name backend1 --etcd-advertise-client-urls http://backend1:2379 --etcd-initial-cluster backend1=http://backend1:2380,backend2=http://backend2:2380,backend3=http://backend3:2380 --etcd-initial-cluster-state new --etcd-initial-advertise-peer-urls http://backend1:2380 --state-dir /var/lib/sensu/sensu-backend/etcd1 --etcd-listen-peer-urls http://0.0.0.0:2380 --log-level debug --debug --insecure-skip-tls-verify
+    hostname: backend1
+    volumes:
+      - sensu1-data:/var/lib/sensu
+    networks:
+      - sensu
+
+  backend2:
+    <<: *sensu-backend
+    command: sensu-backend start --etcd-listen-client-urls http://0.0.0.0:2379 --etcd-name backend2 --etcd-advertise-client-urls http://backend2:2379 --etcd-initial-cluster backend1=http://backend1:2380,backend2=http://backend2:2380,backend3=http://backend3:2380 --etcd-initial-cluster-state new --etcd-initial-advertise-peer-urls http://backend2:2380 --state-dir /var/lib/sensu/sensu-backend/etcd2 --etcd-listen-peer-urls http://0.0.0.0:2380 --log-level debug --debug --insecure-skip-tls-verify
+    hostname: backend2
+    volumes:
+      - sensu2-data:/var/lib/sensu
+
+  backend3:
+    <<: *sensu-backend
+    command: sensu-backend start --etcd-listen-client-urls http://0.0.0.0:2379 --etcd-name backend3 --etcd-advertise-client-urls http://backend3:2379 --etcd-initial-cluster backend1=http://backend1:2380,backend2=http://backend2:2380,backend3=http://backend3:2380 --etcd-initial-cluster-state new --etcd-initial-advertise-peer-urls http://backend3:2380 --state-dir /var/lib/sensu/sensu-backend/etcd3 --etcd-listen-peer-urls http://0.0.0.0:2380 --log-level debug --debug --insecure-skip-tls-verify
+    hostname: backend3
+    volumes:
+      - sensu3-data:/var/lib/sensu
+
+networks:
+  sensu:
+    driver: overlay
+    name: sensu
+    external: false
+    attachable: false
+
+volumes:
+  sensu1-data:
+  sensu2-data:
+  sensu3-data:
