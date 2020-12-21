@@ -1,9 +1,9 @@
 SHELL=/bin/bash # Use bash syntax
-export SENSU_GO_VERSION=6.1.2
-export SENSU_GO_HASH=27af473a8dd3293096708dfcec35e2d98baf1863
+export SENSU_GO_VERSION=6.2.0
+export SENSU_GO_HASH=7fbd30fb6581b16b51ede4e6cafb8c4b2439e96b
 export SENSU_GO_REVISION=0
-export SENSU_GO_WEB_VERSION=v1.0.3
-export SENSU_GO_WEB_HASH=c0890b2dad7b2599bc656460edf89c2596d74fb4
+export SENSU_GO_WEB_VERSION=v1.0.5
+export SENSU_GO_WEB_HASH=6fe78601bc423a5c3624a720220a9d99126fe98b
 export SENSU_GO_WEB_REVISION=0
 export DOCKER_USERNAME=daswars
 
@@ -16,8 +16,7 @@ build-web:
 build-backend:
 	docker build -f Dockerfile-sensu-go --squash --build-arg SENSU_GO_HASH=$(SENSU_GO_HASH) --build-arg SENSU_GO_VERSION=$(SENSU_GO_VERSION) -t $(DOCKER_USERNAME)/sensu:$(SENSU_GO_VERSION)-$(SENSU_GO_REVISION) . 
 
-
-push: build-web build-backend
+push: all
 	docker push $(DOCKER_USERNAME)/sensu:$(SENSU_GO_VERSION)-$(SENSU_GO_REVISION)
 	docker push $(DOCKER_USERNAME)/sensu-web-nginx:$(SENSU_GO_WEB_VERSION)-$(SENSU_GO_WEB_REVISION) 
 
