@@ -30,8 +30,22 @@ More building stuff in the makefile
 
 # Docker-Hub and docker pull infos
 
-https://hub.docker.com/repository/docker/daswars/sensu-web-nginx
-https://hub.docker.com/repository/docker/daswars/sensu
+https://hub.docker.com/r/daswars/sensu-web-nginx
+https://hub.docker.com/r/daswars/sensu
 
 docker push daswars/sensu
 docker push daswars/sensu-web-nginx
+
+# docker-compose howto
+
+
+docker-compose up -d
+
+Sensu web UI: http://localhost
+
+Sensu API: http://localhost:8080
+
+Agent API: ws://localhost:8081
+
+Name: admin
+Password: P@ssw0rd!
