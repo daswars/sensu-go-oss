@@ -19,6 +19,7 @@ build-backend:
 push-backend: build-backend
 	docker tag $(DOCKER_USERNAME)/sensu:$(SENSU_GO_VERSION)-$(SENSU_GO_REVISION) $(DOCKER_USERNAME)/sensu:latest
 	docker push $(DOCKER_USERNAME)/sensu:latest
+	docker push $(DOCKER_USERNAME)/sensu:$(SENSU_GO_VERSION)-$(SENSU_GO_REVISION)
 
 push-web: build-web
 	docker tag $(DOCKER_USERNAME)/sensu-web-nginx:$(SENSU_GO_WEB_VERSION)-$(SENSU_GO_WEB_REVISION) $(DOCKER_USERNAME)/sensu-web-nginx:latest
